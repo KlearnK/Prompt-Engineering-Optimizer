@@ -2,6 +2,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import {
   Sparkles, Wand2, BookOpen, Lightbulb, History, Home,
   Sun, Moon, LogIn, LogOut, User, Brain
@@ -14,22 +16,24 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const NAV_ITEMS = [
-  { path: "/optimizer", label: "优化器", icon: <Wand2 className="w-4 h-4" /> },
-  { path: "/techniques", label: "技巧库", icon: <BookOpen className="w-4 h-4" /> },
-  { path: "/learn", label: "学习", icon: <Lightbulb className="w-4 h-4" /> },
-  { path: "/history", label: "历史", icon: <History className="w-4 h-4" />, requiresAuth: true },
-  { path: "/learning", label: "学习成长", icon: <Brain className="w-4 h-4" />, requiresAuth: true },
-];
-
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
+
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => { window.location.href = "/"; },
-    onError: () => toast.error("退出失败"),
+    onError: () => toast.error(t('common.error')),
   });
+
+  const NAV_ITEMS = [
+    { path: "/optimizer", label: t('nav.optimizer'), icon: <Wand2 className="w-4 h-4" /> },
+    { path: "/techniques", label: t('nav.techniques'), icon: <BookOpen className="w-4 h-4" /> },
+    { path: "/learn", label: t('nav.learning'), icon: <Lightbulb className="w-4 h-4" /> },
+    { path: "/history", label: t('nav.history'), icon: <History className="w-4 h-4" />, requiresAuth: true },
+    { path: "/learning", label: t('nav.learning'), icon: <Brain className="w-4 h-4" />, requiresAuth: true },
+  ];
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -42,7 +46,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-semibold text-sidebar-foreground leading-none">PromptCraft</p>
-            <p className="text-xs text-muted-foreground mt-0.5">AI 提示词优化器</p>
+            <p className="text-xs text-muted-foreground mt-0.5">AI {t('nav.optimizer')}</p>
           </div>
         </div>
 
@@ -55,7 +59,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onClick={() => navigate("/")}
           >
             <Home className="w-4 h-4 shrink-0" />
-            <span className="hidden md:block">首页</span>
+            <span className="hidden md:block">{t('nav.home')}</span>
           </Button>
           {NAV_ITEMS.map((item) => {
             if (item.requiresAuth && !isAuthenticated) return null;
@@ -77,27 +81,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* 底部 */}
         <div className="border-t border-sidebar-border p-2 space-y-1">
+          {/* 语言切换按钮 */}
+          <LanguageSwitcher />
+          
           <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs h-9" onClick={toggleTheme}>
             {theme === "dark" ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
-            <span className="hidden md:block">{theme === "dark" ? "浅色模式" : "深色模式"}</span>
+            <span className="hidden md:block">{theme === "dark" ? "Light" : "Dark"}</span>
           </Button>
           {isAuthenticated ? (
             <div className="hidden md:block">
               <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/50 mb-1">
                 <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground truncate">{user?.name ?? "用户"}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.name ?? "User"}</span>
               </div>
               <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs h-8 text-muted-foreground"
                 onClick={() => logoutMutation.mutate()}>
                 <LogOut className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden md:block">退出登录</span>
+                <span className="hidden md:block">{t('nav.logout')}</span>
               </Button>
             </div>
           ) : (
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs h-9" asChild>
               <a href={getLoginUrl()}>
                 <LogIn className="w-4 h-4 shrink-0" />
-                <span className="hidden md:block">登录</span>
+                <span className="hidden md:block">{t('nav.login')}</span>
               </a>
             </Button>
           )}

@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "home": "Home",
+    "optimizer": "Prompt Optimizer",
+    "techniques": "Techniques",
+    "history": "History",
+    "learning": "Learning",
+    "login": "Login",
+    "logout": "Logout"
+  },
+  "optimizer": {
+    "title": "Prompt Optimizer",
+    "placeholder": "Enter your prompt here...",
+    "assess": "Assess Quality",
+    "optimizing": "Optimizing...",
+    "result": "Optimized Result",
+    "copy": "Copy",
+    "copied": "Copied",
+    "score": "Score",
+    "dimensions": "Dimensions",
+    "suggestions": "Suggestions"
+  },
+  "common": {
+    "switchLang": "中文",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry"
+  }
+}

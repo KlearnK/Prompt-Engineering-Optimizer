@@ -24,8 +24,12 @@ import {
 } from "./db";
 import { TECHNIQUES } from "../shared/promptData";
 
-function buildAssessmentSystemPrompt(): string {
-  return `你是一位专业的提示词工程专家。请从6个质量维度评估给定的提示词，并以结构化JSON格式返回评估结果。所有文本内容必须使用中文。
+// 评估 Prompt - 跟随 UI 语言
+function buildAssessmentSystemPrompt(uiLang: string): string {
+  const isZh = uiLang === 'zh';
+  
+  if (isZh) {
+    return `你是一位专业的提示词工程专家。请从6个质量维度评估给定的提示词，并以结构化JSON格式返回评估结果。所有文本内容必须使用中文。
 
 6个评估维度：
 1. clarity（清晰度）- 提示词是否清晰无歧义，容易理解？
@@ -50,29 +54,69 @@ function buildAssessmentSystemPrompt(): string {
 - recommendedTechniques: 最有帮助的技巧ID数组（数字1-58）
 
 只返回符合上述schema的有效JSON，不要包含markdown代码块或任何解释文字。`;
+  }
+  
+  // English version
+  return `You are a professional prompt engineering expert. Please evaluate the given prompt across 6 quality dimensions and return the assessment results in structured JSON format. All text content must be in English.
+
+6 Evaluation Dimensions:
+1. clarity - Is the prompt clear and unambiguous, easy to understand?
+2. specificity - Are requirements and constraints specific and concrete?
+3. structure - Is there a logical and organized structure?
+4. completeness - Does it include all necessary context and instructions?
+5. tone - Is the tone appropriate for the task?
+6. constraints - Are boundaries and limitations clear?
+
+For each dimension, provide:
+- rating: "Poor" | "Fair" | "Good" | "Excellent" (keep in English for frontend color mapping)
+- score: 1 (Poor), 2 (Fair), 3 (Good), 4 (Excellent)
+- strengths: 1-2 specific strengths (in English, empty array for Poor)
+- weaknesses: 1-2 specific weaknesses (in English, empty array for Excellent)
+- suggestions: 1-2 concrete improvement suggestions (in English)
+
+Also provide:
+- overallScore: Average of all dimension scores (1 decimal place)
+- overallRating: Comprehensive rating based on overallScore ("Poor" | "Fair" | "Good" | "Excellent")
+- summary: 2-3 sentences of comprehensive assessment (in English)
+- topWeaknesses: 2-3 most critical issues (in English)
+- recommendedTechniques: Array of most helpful technique IDs (numbers 1-58)
+
+Return only valid JSON conforming to the above schema, without markdown code blocks or any explanatory text.`;
 }
 
+// 优化 Prompt - 跟随用户输入语言，不指定输出语言
 function buildOptimizationSystemPrompt(assessmentSummary: string, techniques: string[]): string {
-  return `你是一位专业的提示词工程专家。请根据评估结果，对给定的提示词进行重写和优化。
+  return `You are a professional prompt engineering expert. Please rewrite and optimize the given prompt based on the assessment results.
 
-评估摘要：${assessmentSummary}
+Assessment Summary: ${assessmentSummary}
 
-应用以下优化技巧：${techniques.join("、")}
+Apply the following optimization techniques: ${techniques.join(", ")}
 
-优化规则：
-1. 保留原始提示词的意图和目标
-2. 通过消除歧义和模糊语言来提升清晰度
-3. 在有帮助的地方添加具体细节、约束和示例以增强特异性
-4. 合理组织提示词结构（在适用时包含角色、上下文、任务、格式）
-5. 通过补充缺失的上下文确保完整性
-6. 使用适合任务的语气
-7. 添加清晰的约束和边界
-8. 如果是UI/UX提示词，使用具体的组件术语并包含设计系统规范块
-9. 如果是代码提示词，指定语言、框架和输出格式
-10. 保持优化后的提示词简洁但完整
-11. 优化后的提示词语言应与原始提示词保持一致（中文原文输出中文，英文原文输出英文）
+Optimization Rules:
+1. Preserve the original intent and goal of the prompt
+2. Improve clarity by eliminating ambiguity and vague language
+3. Add specific details, constraints, and examples where helpful to enhance specificity
+4. Organize the prompt structure logically (include role, context, task, format where applicable)
+5. Ensure completeness by supplementing missing context
+6. Use tone appropriate for the task
+7. Add clear constraints and boundaries
+8. For UI/UX prompts, use specific component terminology and include design system specification blocks
+9. For code prompts, specify language, framework, and output format
+10. Keep the optimized prompt concise but complete
+11. CRITICAL: The optimized prompt MUST be in the SAME LANGUAGE as the original user input prompt. If user wrote in Chinese, output Chinese. If user wrote in English, output English. Maintain the original language throughout.
 
-只返回优化后的提示词文本，不要包含任何解释、markdown代码块或前缀。`;
+Return only the optimized prompt text, without any explanations, markdown code blocks, or prefixes.`;
+}
+
+// UI关键词转换 Prompt - 跟随 UI 语言
+function buildUiKeywordsPrompt(uiLang: string): string {
+  const isZh = uiLang === 'zh';
+  
+  if (isZh) {
+    return `你是一位专业的UI/UX提示词专家。分析给定的UI设计提示词，识别应该用专业UI/UX术语替换的模糊描述词。返回JSON格式的转换建议，所有reason字段使用中文。`;
+  }
+  
+  return `You are a professional UI/UX prompt expert. Analyze the given UI design prompt and identify vague descriptions that should be replaced with professional UI/UX terminology. Return conversion suggestions in JSON format, with all reason fields in English.`;
 }
 
 export const appRouter = router({
@@ -98,6 +142,9 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // 从请求头读取 UI 语言
+        const uiLang = (ctx.req.headers['x-ui-language'] as string) || 'zh';
+        
         // 从 input 读取配置
         let modelConfig = input.config ? {
           provider: input.config.provider,
@@ -111,12 +158,12 @@ export const appRouter = router({
         }
         
         if (!modelConfig) {
-          throw new Error("请先配置 AI 模型 API Key");
+          throw new Error(uiLang === 'zh' ? "请先配置 AI 模型 API Key" : "Please configure AI model API Key first");
         }
 
         const options: LLMOptions = {
           messages: [
-            { role: "system", content: buildAssessmentSystemPrompt() },
+            { role: "system", content: buildAssessmentSystemPrompt(uiLang) },
             { role: "user", content: `Evaluate this prompt:\n\n${input.prompt}` },
           ],
           response_format: {
@@ -158,13 +205,15 @@ export const appRouter = router({
 
         const response = await invokeMultiLLM(options, modelConfig);
         const content = response.choices[0]?.message?.content ?? "";
-        if (!content) throw new Error("No response from LLM");
+        if (!content) throw new Error(uiLang === 'zh' ? "模型无响应" : "No response from LLM");
 
         try {
           const result = JSON.parse(content);
           return result;
         } catch (e) {
-          throw new Error("Invalid JSON response from LLM");
+          console.error("JSON parse error:", e);
+          console.error("Raw content:", content.substring(0, 500));
+          throw new Error(uiLang === 'zh' ? "模型返回格式错误" : "Invalid response format from LLM");
         }
       }),
 
@@ -180,6 +229,9 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // 从请求头读取 UI 语言（用于错误提示）
+        const uiLang = (ctx.req.headers['x-ui-language'] as string) || 'zh';
+        
         // 从 input 读取配置
         let modelConfig = input.config ? {
           provider: input.config.provider,
@@ -193,7 +245,7 @@ export const appRouter = router({
         }
         
         if (!modelConfig) {
-          throw new Error("请先配置 AI 模型 API Key");
+          throw new Error(uiLang === 'zh' ? "请先配置 AI 模型 API Key" : "Please configure AI model API Key first");
         }
 
         const techniques = input.recommendedTechniqueIds
@@ -210,7 +262,7 @@ export const appRouter = router({
 
         const response = await invokeMultiLLM(options, modelConfig);
         const content = response.choices[0]?.message?.content ?? "";
-        if (!content) throw new Error("No response from LLM");
+        if (!content) throw new Error(uiLang === 'zh' ? "模型无响应" : "No response from LLM");
         
         return { optimizedPrompt: content.trim() };
       }),
@@ -225,6 +277,9 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // 从请求头读取 UI 语言
+        const uiLang = (ctx.req.headers['x-ui-language'] as string) || 'zh';
+        
         // 从 input 读取配置
         let modelConfig = input.config ? {
           provider: input.config.provider,
@@ -238,18 +293,22 @@ export const appRouter = router({
         }
         
         if (!modelConfig) {
-          throw new Error("请先配置 AI 模型 API Key");
+          throw new Error(uiLang === 'zh' ? "请先配置 AI 模型 API Key" : "Please configure AI model API Key first");
         }
+
+        const userMessage = uiLang === 'zh' 
+          ? `分析以下UI提示词，建议具体的术语替换方案：\n\n${input.prompt}\n\n返回JSON格式：{ "conversions": [{ "original": "提示词中找到的模糊词", "suggested": "具体的UI专业术语", "reason": "为什么这样更好（中文说明）" }], "enhancedPrompt": "应用所有替换后的完整重写提示词" }`
+          : `Analyze the following UI prompt and suggest specific terminology replacements:\n\n${input.prompt}\n\nReturn JSON format: { "conversions": [{ "original": "vague word found in prompt", "suggested": "specific UI professional term", "reason": "why this is better (in English)" }], "enhancedPrompt": "complete rewritten prompt with all replacements applied" }`;
 
         const options: LLMOptions = {
           messages: [
             {
               role: "system",
-              content: `你是一位专业的UI/UX提示词专家。分析给定的UI设计提示词，识别应该用专业UI/UX术语替换的模糊描述词。返回JSON格式的转换建议，所有reason字段使用中文。`,
+              content: buildUiKeywordsPrompt(uiLang),
             },
             {
               role: "user",
-              content: `分析以下UI提示词，建议具体的术语替换方案：\n\n${input.prompt}\n\n返回JSON格式：{ "conversions": [{ "original": "提示词中找到的模糊词", "suggested": "具体的UI专业术语", "reason": "为什么这样更好（中文说明）" }], "enhancedPrompt": "应用所有替换后的完整重写提示词" }`,
+              content: userMessage,
             },
           ],
           response_format: {

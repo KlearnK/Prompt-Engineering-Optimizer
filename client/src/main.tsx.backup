@@ -1,4 +1,3 @@
-import './i18n/config';
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,7 +8,6 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 import { ModelConfigProvider } from "./contexts/ModelConfigContext";
-import i18n from "./i18n/config";
 
 const queryClient = new QueryClient();
 
@@ -40,11 +38,14 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Helper to read model config from localStorage for request headers
+
 function getModelConfigHeaders(): Record<string, string> {
   try {
     const raw = localStorage.getItem("modelConfig");
     if (raw) {
       const cfg = JSON.parse(raw);
+      // 检查 model 或 modelId（ModelConfigContext 用的是 model）
       const modelId = cfg.model || cfg.modelId;
       if (cfg.apiKey && cfg.provider && modelId) {
         return {
@@ -73,7 +74,6 @@ const trpcClient = trpc.createClient({
           headers: {
             ...(init?.headers ?? {}),
             ...modelHeaders,
-            "x-ui-language": i18n.language || "zh",
           },
         });
       },

@@ -1,0 +1,29 @@
+{
+  "nav": {
+    "home": "首页",
+    "optimizer": "提示词优化",
+    "techniques": "技巧库",
+    "history": "历史记录",
+    "learning": "学习中心",
+    "login": "登录",
+    "logout": "退出登录"
+  },
+  "optimizer": {
+    "title": "提示词优化器",
+    "placeholder": "在此输入您的提示词...",
+    "assess": "评估质量",
+    "optimizing": "优化中...",
+    "result": "优化结果",
+    "copy": "复制",
+    "copied": "已复制",
+    "score": "评分",
+    "dimensions": "维度分析",
+    "suggestions": "改进建议"
+  },
+  "common": {
+    "switchLang": "English",
+    "loading": "加载中...",
+    "error": "错误",
+    "retry": "重试"
+  }
+}
