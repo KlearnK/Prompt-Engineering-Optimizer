@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1772694887709,
+      "tag": "0000_dapper_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1772695044310,
+      "tag": "0001_outstanding_black_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772763239974,
+      "tag": "0002_complete_drax",
+      "breakpoints": true
+    }
+  ]
+}

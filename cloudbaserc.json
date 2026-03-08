@@ -1,0 +1,27 @@
+{
+  "envId": "{{YOUR_ENV_ID}}",
+  "framework": {
+    "name": "prompt-optimizer-tool",
+    "plugins": {
+      "server": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "prompt-optimizer",
+          "servicePath": "/",
+          "localPath": "./",
+          "uploadType": "package",
+          "containerPort": 3000,
+          "buildCommand": "npm install -g pnpm && pnpm install && pnpm build",
+          "startCommand": "node dist/index.js",
+          "cpu": 0.25,
+          "mem": 0.5,
+          "minNum": 0,
+          "maxNum": 5,
+          "envVariables": {
+            "NODE_ENV": "production"
+          }
+        }
+      }
+    }
+  }
+}

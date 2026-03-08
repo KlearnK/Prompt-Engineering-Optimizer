@@ -1,0 +1,32 @@
+# PromptCraft Local Deployment - Environment Variables Template
+# To use: copy this file to .env and fill in your values
+#   cp env-template.txt .env
+
+# === Database (Required) ===
+MYSQL_ROOT_PASSWORD=promptcraft_root_password
+MYSQL_DATABASE=promptcraft
+MYSQL_USER=promptcraft
+MYSQL_PASSWORD=change_this_password
+
+# === App Config (Required) ===
+# JWT secret for session cookies - use a long random string (32+ chars)
+JWT_SECRET=change_this_to_a_very_long_random_secret_string_at_least_32_chars
+
+# App port (default: 8080)
+APP_PORT=8080
+
+# === Manus OAuth (Optional) ===
+# Without this, users cannot log in (history and learning features require login)
+VITE_APP_ID=
+OAUTH_SERVER_URL=
+VITE_OAUTH_PORTAL_URL=
+OWNER_OPEN_ID=
+OWNER_NAME=
+
+# === Built-in LLM (Optional) ===
+# Without this, users must configure their own API keys in-app
+# Supported: DeepSeek, Tongyi Qianwen, Zhipu AI, OpenAI
+BUILT_IN_FORGE_API_URL=
+BUILT_IN_FORGE_API_KEY=
+VITE_FRONTEND_FORGE_API_URL=
+VITE_FRONTEND_FORGE_API_KEY=

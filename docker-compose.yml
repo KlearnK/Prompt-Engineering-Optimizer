@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  # ─── MySQL Database ──────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: promptcraft-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-promptcraft_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-promptcraft}
+      MYSQL_USER: ${MYSQL_USER:-promptcraft}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-promptcraft_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-promptcraft_root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── Database Migration (runs once on startup) ───────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: promptcraft-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-promptcraft}:${MYSQL_PASSWORD:-promptcraft_pass}@db:3306/${MYSQL_DATABASE:-promptcraft}
+      NODE_ENV: production
+    command: ["sh", "-c", "npx drizzle-kit generate && npx drizzle-kit migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ─── Application Server ───────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promptcraft-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-promptcraft}:${MYSQL_PASSWORD:-promptcraft_pass}@db:3306/${MYSQL_DATABASE:-promptcraft}
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_long_random_secret_string}
+      # Manus OAuth (optional — only needed if you want Manus login)
+      VITE_APP_ID: ${VITE_APP_ID:-}
+      OAUTH_SERVER_URL: ${OAUTH_SERVER_URL:-}
+      VITE_OAUTH_PORTAL_URL: ${VITE_OAUTH_PORTAL_URL:-}
+      OWNER_OPEN_ID: ${OWNER_OPEN_ID:-}
+      OWNER_NAME: ${OWNER_NAME:-}
+      # Built-in LLM (optional — users can configure their own API keys in-app)
+      BUILT_IN_FORGE_API_URL: ${BUILT_IN_FORGE_API_URL:-}
+      BUILT_IN_FORGE_API_KEY: ${BUILT_IN_FORGE_API_KEY:-}
+      VITE_FRONTEND_FORGE_API_URL: ${VITE_FRONTEND_FORGE_API_URL:-}
+      VITE_FRONTEND_FORGE_API_KEY: ${VITE_FRONTEND_FORGE_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  db_data:
+    driver: local
