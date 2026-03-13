@@ -1,0 +1,2 @@
+# 在 server/package.json 的 dependencies 中添加 "better-sqlite3": "^9.4.3"
+# 在 devDependencies 中添加 "@types/better-sqlite3": "^7.6.9"

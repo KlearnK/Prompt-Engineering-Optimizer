@@ -1,47 +1,53 @@
 services:
-  db:
-    image: mysql:8.0
-    container_name: promptcraft-v04-db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: promptcraft
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppassword
-    ports:
-      - "3307:3306"  # 改为 3307，避免与 V03 的 3306 冲突
-    volumes:
-      - v04_mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  migrate:
+  server:
     build:
-      context: .
+      context: ./server
       dockerfile: Dockerfile
-      target: runner
-    container_name: promptcraft-v04-migrate
-    command: npx drizzle-kit migrate
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=mysql://appuser:apppassword@db:3306/promptcraft
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: promptcraft-v04-app
+    container_name: promptcraft-server
     ports:
-      - "8081:3000"  # 改为 8081，避免与 V03 的 8080 冲突
+      - "3001:3001"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=mysql://appuser:apppassword@db:3306/promptcraft
-    depends_on:
-      - migrate
+      - PORT=3001
+      - DB_PATH=/app/data/analytics.db
+      - LOG_LEVEL=info
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./docs:/app/docs
+      # 注意：不挂载 ./server/src，让代码编译在镜像内完成
+    networks:
+      - promptcraft-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-volumes:
-  v04_mysql_data:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: promptcraft-client
+    ports:
+      - "8082:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://localhost:3001/api
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - promptcraft-network
+    restart: unless-stopped
+
+networks:
+  promptcraft-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

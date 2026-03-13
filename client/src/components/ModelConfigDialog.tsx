@@ -1,22 +1,6 @@
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useModelConfig } from '@/contexts/ModelConfigContext';
-import { Settings } from 'lucide-react';
+import { useState } from 'react';
+import { useModelConfig } from '../contexts/ModelConfigContext';
+import { Settings, X } from 'lucide-react';
 
 const providers = [
   { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder'] },
@@ -25,7 +9,7 @@ const providers = [
   { id: 'zhipu', name: '智谱AI', models: ['glm-4', 'glm-3-turbo'] },
 ];
 
-const ModelConfigDialog: React.FC = () => {
+export default function ModelConfigDialog() {
   const { config, setConfig, isConfigured } = useModelConfig();
   const [open, setOpen] = useState(false);
   const [localConfig, setLocalConfig] = useState(config);
@@ -37,84 +21,101 @@ const ModelConfigDialog: React.FC = () => {
 
   const selectedProvider = providers.find(p => p.id === localConfig.provider);
 
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+      >
+        <Settings className="w-4 h-4" />
+        {isConfigured ? '更换模型' : '配置 API'}
+      </button>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Settings className="w-4 h-4 mr-2" />
-          {isConfigured ? '更换模型' : '配置 API'}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>配置 AI 模型</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">模型提供商</label>
-            <Select
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">配置 AI 模型</h2>
+          <button
+            onClick={() => setOpen(false)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* 提供商选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              模型提供商
+            </label>
+            <select
               value={localConfig.provider}
-              onValueChange={(v: any) => {
-                const provider = providers.find(p => p.id === v);
+              onChange={(e) => {
+                const provider = providers.find(p => p.id === e.target.value);
                 setLocalConfig({
                   ...localConfig,
-                  provider: v,
+                  provider: e.target.value as any,
                   model: provider?.models[0] || '',
                 });
               }}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {providers.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {providers.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">模型</label>
-            <Select
+          {/* 模型选择 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              模型
+            </label>
+            <select
               value={localConfig.model}
-              onValueChange={(v) => setLocalConfig({ ...localConfig, model: v })}
+              onChange={(e) => setLocalConfig({ ...localConfig, model: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedProvider?.models.map(m => (
-                  <SelectItem key={m} value={m}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {selectedProvider?.models.map(m => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">API Key</label>
-            <Input
+          {/* API Key */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              API Key
+            </label>
+            <input
               type="password"
               placeholder="sk-..."
               value={localConfig.apiKey}
               onChange={(e) => setLocalConfig({ ...localConfig, apiKey: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <p className="text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500">
               API Key 仅存储在本地浏览器中，不会上传到服务器
             </p>
           </div>
 
-          <Button onClick={handleSave} className="w-full">
+          {/* 保存按钮 */}
+          <button
+            onClick={handleSave}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
             保存配置
-          </Button>
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
-};
-
-export default ModelConfigDialog;
+}
